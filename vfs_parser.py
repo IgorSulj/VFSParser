@@ -1,4 +1,5 @@
 import time
+import threading
 import credentials
 from itertools import cycle
 from selenium.webdriver import Firefox, FirefoxOptions
@@ -71,13 +72,17 @@ def get_time(driver, wait, city):
     print('Уведомление')
 
 
-def main():
+def main(shutdown: threading.Event):
     driver, wait = login()
     get_form(driver, wait)
     pass_loading(wait)
     for city in cycle(option_id_by_city.keys()):
-        get_time(driver, wait, city)
+        if not shutdown.is_set():
+            get_time(driver, wait, city)
+        else:
+            driver.close()
+            break
 
 
 if __name__ == '__main__':
-    main()
+    main(threading.Event())
