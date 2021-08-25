@@ -1,7 +1,6 @@
 import asyncio
 import threading
-from functools import partial
-
+from selenium.common.exceptions import WebDriverException
 from aiogram import Bot, Dispatcher, types, executor
 import credentials
 import vfs_parser
@@ -16,7 +15,6 @@ def private_handler(func):
 
 
 shutdown_event = threading.Event()
-aio_shutdown_event = asyncio.Event()
 bot = Bot(credentials.telegram_token)
 dispatcher = Dispatcher(bot)
 parser_task: asyncio.Task = None
@@ -24,14 +22,19 @@ notifier_task: asyncio.Task = None
 
 
 async def notifier(msg: types.Message):
-    done, pending = await asyncio.wait((parser_task, aio_shutdown_event.wait()), return_when=asyncio.FIRST_COMPLETED)
-    if parser_task in done:
-        await msg.reply(f'Нашел место в городе {parser_task.result()}')
+    try:
+        await parser_task
+        result = parser_task.result()
+        if result is not None:
+            await msg.reply(f'Нашел место в городе {result}')
+    except WebDriverException:
+        await msg.reply('Что-то пошло не так в парсере...')
 
 
-@dispatcher.message_handler(commands=['start'])
+@dispatcher.message_handler(commands=['start', 'awake'])
 @private_handler
 async def start(msg: types.Message):
+    shutdown_event.clear()
     global parser_task
     parser_coro = asyncio.to_thread(vfs_parser.main, shutdown_event)
     parser_task = asyncio.create_task(parser_coro)
@@ -43,8 +46,14 @@ async def start(msg: types.Message):
 @private_handler
 async def shutdown(msg: types.Message):
     shutdown_event.set()
-    aio_shutdown_event.set()
     await msg.reply('Shut down successfully')
+
+
+@dispatcher.message_handler(commands=['info'])
+@private_handler
+async def info(msg: types.Message):
+    parser_info = f'Status: {"not working" if parser_task is None or parser_task.done() else "working"}'
+    await msg.reply(parser_info)
 
 
 if __name__ == '__main__':

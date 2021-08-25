@@ -22,7 +22,7 @@ def pass_loading(wait):
 
 def login():
     options = FirefoxOptions()
-    # options.headless = True
+    options.headless = True
     driver = Firefox(options=options)
     wait = WebDriverWait(driver, timeout=10000, poll_frequency=0.1)
     driver.get('https://visa.vfsglobal.com/blr/ru/ltu/login')
@@ -76,13 +76,14 @@ def main(shutdown: threading.Event()):
     driver, wait = login()
     get_form(driver, wait)
     pass_loading(wait)
-    for city in cycle(option_id_by_city.keys()):
-        if not shutdown.is_set():
-            time.sleep(5)
-            if get_time(driver, wait, city):
-                return city
-        else:
-            break
+    while True:
+        for city in cycle(option_id_by_city.keys()):
+            if not shutdown.is_set():
+                if get_time(driver, wait, city):
+                    return city
+            else:
+                return
+        time.sleep(600)
 
 
 if __name__ == '__main__':
