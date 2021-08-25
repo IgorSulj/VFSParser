@@ -5,6 +5,14 @@ import credentials
 import vfs_parser
 
 
+def private_handler(func):
+    async def handler(msg: types.Message):
+        if msg.from_user['id'] in credentials.telegram_allowed_ids:
+            await func(msg)
+
+    return handler
+
+
 bot = Bot(credentials.telegram_token)
 dispatcher = Dispatcher(bot)
 parser_task: asyncio.Task = None
@@ -12,6 +20,7 @@ shutdown_event = threading.Event()
 
 
 @dispatcher.message_handler(commands=['start'])
+@private_handler
 async def start(msg: types.Message):
     await msg.reply('Parser started to work!')
     shutdown_event.clear()
@@ -21,6 +30,7 @@ async def start(msg: types.Message):
 
 
 @dispatcher.message_handler(commands=['shutdown'])
+@private_handler
 async def shutdown(msg: types.Message):
     shutdown_event.set()
     await parser_task

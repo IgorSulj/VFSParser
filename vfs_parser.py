@@ -22,7 +22,7 @@ def pass_loading(wait):
 
 def login():
     options = FirefoxOptions()
-    # options.headless = True
+    options.headless = True
     driver = Firefox(options=options)
     wait = WebDriverWait(driver, timeout=10000, poll_frequency=0.1)
     driver.get('https://visa.vfsglobal.com/blr/ru/ltu/login')
