@@ -22,7 +22,7 @@ def pass_loading(wait):
 
 def login():
     options = FirefoxOptions()
-    options.headless = True
+    # options.headless = True
     driver = Firefox(options=options)
     wait = WebDriverWait(driver, timeout=10000, poll_frequency=0.1)
     driver.get('https://visa.vfsglobal.com/blr/ru/ltu/login')
@@ -67,21 +67,21 @@ def get_time(driver, wait, city):
     pass_loading(wait)
     alert = driver.find_elements_by_class_name('alert-info')
     if alert and alert[0].text == 'В настоящее время нет свободных мест для записи':
-        return
+        return False
     # Уведомление
-    print('Уведомление')
+    return True
 
 
-def main(shutdown: threading.Event):
+def main(shutdown: threading.Event()):
     driver, wait = login()
     get_form(driver, wait)
     pass_loading(wait)
     for city in cycle(option_id_by_city.keys()):
-        print(shutdown.is_set())
         if not shutdown.is_set():
-            get_time(driver, wait, city)
+            time.sleep(5)
+            if get_time(driver, wait, city):
+                return city
         else:
-            driver.close()
             break
 
 
