@@ -1,6 +1,6 @@
 import asyncio
 import threading
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, NoSuchElementException
 from aiogram import Bot, Dispatcher, types, executor
 import credentials
 import vfs_parser
@@ -27,6 +27,8 @@ async def notifier(msg: types.Message):
         result = parser_task.result()
         if result is not None:
             await msg.reply(f'Нашел место в городе {result}')
+    except NoSuchElementException:
+        await msg.reply('Не смог найти нужный элемент...')
     except WebDriverException:
         await msg.reply('Что-то пошло не так в парсере...')
 
@@ -34,25 +36,32 @@ async def notifier(msg: types.Message):
 @dispatcher.message_handler(commands=['start', 'awake'])
 @private_handler
 async def start(msg: types.Message):
-    shutdown_event.clear()
     global parser_task
-    parser_coro = asyncio.to_thread(vfs_parser.main, shutdown_event)
-    parser_task = asyncio.create_task(parser_coro)
-    await msg.reply('Parser started to work!')
-    await notifier(msg)
+    if parser_task is None or parser_task.done():
+        shutdown_event.clear()
+        parser_coro = asyncio.to_thread(vfs_parser.main, shutdown_event)
+        parser_task = asyncio.create_task(parser_coro)
+        await msg.reply('Парсер начал работу!')
+        await notifier(msg)
+    else:
+        await msg.reply('Парсер уже работает')
 
 
 @dispatcher.message_handler(commands=['shutdown'])
 @private_handler
 async def shutdown(msg: types.Message):
-    shutdown_event.set()
-    await msg.reply('Shut down successfully')
+    if parser_task is not None and not parser_task.done():
+        shutdown_event.set()
+        await parser_task
+        await msg.reply('Успешно завершил работу')
+    else:
+        await msg.reply('Парсер уже не работает')
 
 
 @dispatcher.message_handler(commands=['info'])
 @private_handler
 async def info(msg: types.Message):
-    parser_info = f'Status: {"not working" if parser_task is None or parser_task.done() else "working"}'
+    parser_info = f'Статус: {"не работаю" if parser_task is None or parser_task.done() else "работаю"}'
     await msg.reply(parser_info)
 
 
