@@ -96,7 +96,7 @@ def main(shutdown: threading.Event()):
                         return city
                 else:
                     return
-            if shutdown.wait(100):  # Ждем 100 секунд или команды на отключение
+            if shutdown.wait(85):  # Ждем 85 секунд или команды на отключение
                 return
 
 
